@@ -14,7 +14,7 @@
 ```bash
 # Клонируем репозиторий
 git clone https://github.com/Esteviredzu/photobot.git
-cd your_repository
+cd photobot
 
 # Устанавливаем зависимости
 python -m venv venv
@@ -32,7 +32,7 @@ python bot.py
 ```powershell
 # Клонируем репозиторий
 git clone https://github.com/Esteviredzu/photobot.git
-cd your_repository
+cd photobot
 
 # Устанавливаем зависимости
 python -m venv venv
