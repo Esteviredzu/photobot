@@ -1,0 +1,10 @@
+aiogram
+python-dotenv
+requests
+torch
+numpy
+ultralytics
+opencv-python
+rembg
+onnxruntime
+fpdf
