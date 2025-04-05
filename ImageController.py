@@ -37,32 +37,67 @@ def remove_background(image: Image.Image) -> Image.Image:
     return Image.fromarray(output_data)
 
 
-def align_symbol(image: Image.Image) -> Image.Image:
+def align_symbol(image):
     """
-    Выравнивает значок, анализируя форму и корректируя угол наклона.
+    Выравнивает значок по вертикали и обрезает по его границам.
+    Использует удаление фона только для оценки формы.
     """
-    img_array = np.array(image.convert("RGBA"))
-    gray = cv2.cvtColor(img_array, cv2.COLOR_RGBA2GRAY)
-    _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
-    
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:
-        return image
-    
-    mask = np.zeros_like(thresh)
-    cv2.drawContours(mask, contours, -1, 255, thickness=cv2.FILLED)
-    labeled_mask = label(mask)
-    regions = regionprops(labeled_mask)
-    
+    # Получаем изображение с удалённым фоном для анализа
+    img_no_bg = remove_background(image)
+    img_no_bg_array = np.array(img_no_bg.convert("RGBA"))
+
+    original_array = np.array(image.convert("RGBA"))
+
+    min_area = float('inf')
+    best_angle = 0
+
+    def get_mask(img_arr):
+        gray = cv2.cvtColor(img_arr, cv2.COLOR_RGBA2GRAY)
+        _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+        return thresh
+
+    # Ищем лучший угол вращения
+    for angle in range(-45, 46, 1):
+        rotated_mask_img = Image.fromarray(img_no_bg_array).rotate(angle, expand=True, fillcolor=(0, 0, 0, 0))
+        rotated_mask_array = np.array(rotated_mask_img)
+
+        mask = get_mask(rotated_mask_array)
+        labeled = label(mask)
+        regions = regionprops(labeled)
+
+        if not regions:
+            continue
+
+        region = max(regions, key=lambda r: r.area)
+        minr, minc, maxr, maxc = region.bbox
+        area = (maxr - minr) * (maxc - minc)
+
+        if area < min_area:
+            min_area = area
+            best_angle = angle
+
+    # Поворачиваем оригинальное изображение
+    rotated_img = Image.fromarray(original_array).rotate(best_angle, expand=True, fillcolor=(0, 0, 0, 0))
+    rotated_arr = np.array(rotated_img)
+
+    # Также поворачиваем маску, чтобы определить границы значка
+    rotated_mask_img = Image.fromarray(img_no_bg_array).rotate(best_angle, expand=True, fillcolor=(0, 0, 0, 0))
+    rotated_mask_arr = np.array(rotated_mask_img)
+    mask = get_mask(rotated_mask_arr)
+
+    labeled = label(mask)
+    regions = regionprops(labeled)
+
     if not regions:
-        return image
-    
-    minr, minc, maxr, maxc = regions[0].bbox
-    cropped = img_array[minr:maxr, minc:maxc]
-    orientation = regions[0].orientation * 180 / np.pi
-    rotated = Image.fromarray(cropped).rotate(-orientation, expand=True, fillcolor=(0, 0, 0, 0))
-    
-    return rotated
+        return rotated_img  # fallback
+
+    region = max(regions, key=lambda r: r.area)
+    minr, minc, maxr, maxc = region.bbox
+
+    # Обрезаем повернутое изображение по найденным границам
+    cropped = rotated_arr[minr:maxr, minc:maxc]
+
+    return Image.fromarray(cropped)
 
 
 class ImageController:
