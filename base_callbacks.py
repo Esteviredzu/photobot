@@ -19,6 +19,8 @@ async def start_command(message: Message) -> None:
     text = "Привет! Я бот! Отправь мне фото, и я обработаю его!"
     await message.answer(text)
 
+async def stop_command(message: Message) -> None:
+    return
 
 async def handle_photo(message: Message, state: FSMContext) -> None:
     """Обрабатывает получение фотографии от пользователя."""
@@ -33,6 +35,7 @@ async def handle_photo(message: Message, state: FSMContext) -> None:
         [InlineKeyboardButton(text="В размеченном PDF", callback_data="export_to_pdf")],
         [InlineKeyboardButton(text="Фото с выделенными значками", callback_data="marked_photo")],
         [InlineKeyboardButton(text="Скачать все распознанные значки", callback_data="download_all_icons")]
+        [InlineKeyboardButton(text="Выход", callback_data="stop")],
     ])
 
     await message.reply("Фото получено! Как хотите получить результат?", reply_markup=keyboard)
@@ -100,5 +103,6 @@ def register_base_callbacks(dp: Dispatcher, bot: Bot) -> None:
     """Регистрирует обработчики команд и событий."""
     dp.message.register(start_command, Command("start"))
     dp.message.register(handle_photo, F.photo)
+    db.message.register(stop_command, Command("stop"))
     dp.callback_query.register(handle_marked_photo, F.data == "marked_photo")
     dp.callback_query.register(handle_download_all_icons, F.data == "download_all_icons")
