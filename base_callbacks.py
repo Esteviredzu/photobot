@@ -103,6 +103,6 @@ def register_base_callbacks(dp: Dispatcher, bot: Bot) -> None:
     """Регистрирует обработчики команд и событий."""
     dp.message.register(start_command, Command("start"))
     dp.message.register(handle_photo, F.photo)
-    db.message.register(stop_command, Command("stop"))
+    dp.message.register(stop_command, Command("stop"))
     dp.callback_query.register(handle_marked_photo, F.data == "marked_photo")
     dp.callback_query.register(handle_download_all_icons, F.data == "download_all_icons")
