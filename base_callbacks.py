@@ -9,6 +9,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types.input_file import BufferedInputFile
 
+import db_helper
 from yolo_processor import YOLOProcessor
 from ImageController import ImageController
 from OutputController import OutputController
@@ -22,6 +23,25 @@ async def start_command(message: Message) -> None:
 async def stop_command(message: Message) -> None:
     return
 
+async def install_command(message: Message) -> None:
+    command, text = Message.text.split(' ', 1)
+    images = db_helper.DBHelper.get_only_icons_by_album(text)
+    for image in images:
+        await handle_photo_from_album(image)
+
+
+async def handle_photo_from_album(image, state: FSMContext) -> None:
+
+    file_url = image
+
+    await state.update_data(photo=file_url)
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="В размеченном PDF", callback_data="export_to_pdf")],
+        [InlineKeyboardButton(text="Скачать все распознанные значки", callback_data="download_all_icons")],
+        [InlineKeyboardButton(text="Выход", callback_data="stop")]
+    ])
+
 async def handle_photo(message: Message, state: FSMContext) -> None:
     """Обрабатывает получение фотографии от пользователя."""
     photo = message.photo[-1]
@@ -34,8 +54,8 @@ async def handle_photo(message: Message, state: FSMContext) -> None:
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="В размеченном PDF", callback_data="export_to_pdf")],
         [InlineKeyboardButton(text="Фото с выделенными значками", callback_data="marked_photo")],
-        [InlineKeyboardButton(text="Скачать все распознанные значки", callback_data="download_all_icons")]
-        [InlineKeyboardButton(text="Выход", callback_data="stop")],
+        [InlineKeyboardButton(text="Скачать все распознанные значки", callback_data="download_all_icons")],
+        [InlineKeyboardButton(text="Выход", callback_data="stop")]
     ])
 
     await message.reply("Фото получено! Как хотите получить результат?", reply_markup=keyboard)
@@ -102,6 +122,7 @@ async def handle_download_all_icons(callback: types.CallbackQuery, state: FSMCon
 def register_base_callbacks(dp: Dispatcher, bot: Bot) -> None:
     """Регистрирует обработчики команд и событий."""
     dp.message.register(start_command, Command("start"))
+    dp.message.register(install_command, Command("install_images"))
     dp.message.register(handle_photo, F.photo)
     dp.message.register(stop_command, Command("stop"))
     dp.callback_query.register(handle_marked_photo, F.data == "marked_photo")
